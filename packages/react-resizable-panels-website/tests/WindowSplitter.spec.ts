@@ -1,22 +1,28 @@
 import { test, expect, Page } from "@playwright/test";
 import { createElement } from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import {
+  Panel,
+  PanelGroup,
+  PanelProps,
+  PanelResizeHandle,
+} from "react-resizable-panels";
 
 import { verifyAriaValues } from "./utils/aria";
 import { goToUrl } from "./utils/url";
 
 async function goToDefaultUrl(
   page: Page,
-  direction: "horizontal" | "vertical" = "horizontal"
+  direction: "horizontal" | "vertical" = "horizontal",
+  firstPanelProps?: Partial<PanelProps>
 ) {
   await goToUrl(
     page,
     createElement(
       PanelGroup,
       { direction },
-      createElement(Panel),
+      createElement(Panel, { minSize: 10, ...firstPanelProps }),
       createElement(PanelResizeHandle),
-      createElement(Panel)
+      createElement(Panel, { minSize: 10 })
     )
   );
 }
@@ -30,7 +36,10 @@ test.describe("Window Splitter", () => {
         createElement(
           PanelGroup,
           { direction: "horizontal" },
-          createElement(Panel, { defaultSize: 35, minSize: 20 }),
+          createElement(Panel, {
+            defaultSize: 35,
+            minSize: 20,
+          }),
           createElement(PanelResizeHandle),
           createElement(Panel, { minSize: 5 })
         )
@@ -70,9 +79,12 @@ test.describe("Window Splitter", () => {
         createElement(
           PanelGroup,
           { direction: "horizontal" },
-          createElement(Panel, { maxSize: 50 }),
+          createElement(Panel, {
+            maxSize: 50,
+            minSize: 10,
+          }),
           createElement(PanelResizeHandle),
-          createElement(Panel)
+          createElement(Panel, { minSize: 10 })
         )
       );
 
@@ -90,9 +102,12 @@ test.describe("Window Splitter", () => {
         createElement(
           PanelGroup,
           { direction: "horizontal" },
-          createElement(Panel, { defaultSize: 65 }),
+          createElement(Panel, {
+            defaultSize: 65,
+            minSize: 10,
+          }),
           createElement(PanelResizeHandle),
-          createElement(Panel, { maxSize: 40 })
+          createElement(Panel, { maxSize: 40, minSize: 10 })
         )
       );
 
@@ -118,39 +133,39 @@ test.describe("Window Splitter", () => {
 
       await page.keyboard.press("ArrowRight");
       await verifyAriaValues(resizeHandle, {
-        now: 51,
+        now: 60,
       });
 
       await page.keyboard.press("ArrowRight");
       await verifyAriaValues(resizeHandle, {
-        now: 52,
+        now: 70,
       });
 
       // This isn't officially part of the spec but it seems like a nice tweak
       await page.keyboard.press("Shift+ArrowRight");
       await verifyAriaValues(resizeHandle, {
-        now: 62,
+        now: 90,
       });
 
       await page.keyboard.press("ArrowLeft");
       await verifyAriaValues(resizeHandle, {
-        now: 61,
+        now: 80,
       });
 
       // This isn't officially part of the spec but it seems like a nice tweak
       await page.keyboard.press("Shift+ArrowLeft");
       await verifyAriaValues(resizeHandle, {
-        now: 51,
+        now: 10,
       });
 
       // Up and down arrows should not affect a "horizontal" list
       await page.keyboard.press("ArrowUp");
       await verifyAriaValues(resizeHandle, {
-        now: 51,
+        now: 10,
       });
       await page.keyboard.press("ArrowDown");
       await verifyAriaValues(resizeHandle, {
-        now: 51,
+        now: 10,
       });
     });
 
@@ -167,40 +182,48 @@ test.describe("Window Splitter", () => {
       // Up and down arrows should affect a "vertical" list
       await page.keyboard.press("ArrowUp");
       await verifyAriaValues(resizeHandle, {
-        now: 49,
+        now: 40,
       });
 
       await page.keyboard.press("ArrowDown");
       await page.keyboard.press("ArrowDown");
       await verifyAriaValues(resizeHandle, {
-        now: 51,
+        now: 60,
       });
 
       await page.keyboard.press("Shift+ArrowDown");
       await verifyAriaValues(resizeHandle, {
-        now: 61,
+        now: 90,
       });
-      await page.keyboard.press("Shift+ArrowUp");
+
+      await page.keyboard.press("ArrowUp");
+      await verifyAriaValues(resizeHandle, {
+        now: 80,
+      });
+
       await page.keyboard.press("Shift+ArrowUp");
       await verifyAriaValues(resizeHandle, {
-        now: 41,
+        now: 10,
       });
 
       // But Left and right arrows should be ignored
       await page.keyboard.press("ArrowLeft");
       await verifyAriaValues(resizeHandle, {
-        now: 41,
+        now: 10,
       });
       await page.keyboard.press("ArrowRight");
       await verifyAriaValues(resizeHandle, {
-        now: 41,
+        now: 10,
       });
     });
   });
 
   test.describe("other keys", () => {
-    test("Enter key", async ({ page }) => {
-      await goToDefaultUrl(page);
+    test("Enter key (not collapsible)", async ({ page }) => {
+      await goToDefaultUrl(page, "horizontal", {
+        collapsible: false,
+        minSize: 10,
+      });
 
       const resizeHandle = page.locator("[data-panel-resize-handle-id]");
       await resizeHandle.focus();
@@ -212,17 +235,41 @@ test.describe("Window Splitter", () => {
 
       await page.keyboard.press("Enter");
       await verifyAriaValues(resizeHandle, {
+        now: 50,
+      });
+
+      await page.keyboard.press("Enter");
+      await verifyAriaValues(resizeHandle, {
+        now: 50,
+      });
+    });
+
+    test("Enter key (collapsible)", async ({ page }) => {
+      await goToDefaultUrl(page, "horizontal", {
+        collapsible: true,
+      });
+
+      const resizeHandle = page.locator("[data-panel-resize-handle-id]");
+      await resizeHandle.focus();
+      await verifyAriaValues(resizeHandle, {
+        min: 10,
+        max: 90,
+        now: 50,
+      });
+
+      await page.keyboard.press("Enter");
+      await verifyAriaValues(resizeHandle, {
+        now: 0,
+      });
+
+      await page.keyboard.press("Enter");
+      await verifyAriaValues(resizeHandle, {
         now: 10,
       });
 
       await page.keyboard.press("Enter");
       await verifyAriaValues(resizeHandle, {
-        now: 90,
-      });
-
-      await page.keyboard.press("Enter");
-      await verifyAriaValues(resizeHandle, {
-        now: 10,
+        now: 0,
       });
     });
 
@@ -232,9 +279,13 @@ test.describe("Window Splitter", () => {
         createElement(
           PanelGroup,
           { direction: "horizontal" },
-          createElement(Panel, { defaultSize: 40, maxSize: 70, minSize: 20 }),
+          createElement(Panel, {
+            defaultSize: 40,
+            maxSize: 70,
+            minSize: 20,
+          }),
           createElement(PanelResizeHandle),
-          createElement(Panel)
+          createElement(Panel, { minSize: 10 })
         )
       );
 
@@ -264,13 +315,13 @@ test.describe("Window Splitter", () => {
         createElement(
           PanelGroup,
           { direction: "horizontal" },
-          createElement(Panel),
+          createElement(Panel, { minSize: 10 }),
           createElement(PanelResizeHandle),
-          createElement(Panel),
+          createElement(Panel, { minSize: 10 }),
           createElement(PanelResizeHandle),
-          createElement(Panel),
+          createElement(Panel, { minSize: 10 }),
           createElement(PanelResizeHandle),
-          createElement(Panel)
+          createElement(Panel, { minSize: 10 })
         )
       );
 

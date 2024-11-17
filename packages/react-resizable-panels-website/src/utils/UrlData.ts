@@ -7,27 +7,31 @@ import {
   RefObject,
 } from "react";
 import {
+  ImperativePanelGroupHandle,
   ImperativePanelHandle,
   Panel,
   PanelGroup,
   PanelGroupOnLayout,
   PanelGroupProps,
   PanelOnCollapse,
+  PanelOnExpand,
   PanelOnResize,
   PanelProps,
   PanelResizeHandle,
+  PanelResizeHandleOnDragging,
   PanelResizeHandleProps,
 } from "react-resizable-panels";
 import { ImperativeDebugLogHandle } from "../routes/examples/DebugLog";
 
 type UrlPanel = {
   children: Array<string | UrlPanelGroup>;
+  collapsedSize?: number;
   collapsible?: boolean;
-  defaultSize?: number;
-  id?: string;
-  maxSize?: number;
+  defaultSize?: number | null;
+  id?: string | null;
+  maxSize?: number | null;
   minSize?: number;
-  order?: number;
+  order?: number | null;
   style?: CSSProperties;
   type: "UrlPanel";
 };
@@ -36,14 +40,15 @@ type UrlPanelGroup = {
   autoSaveId?: string;
   children: Array<UrlPanel | UrlPanelResizeHandle>;
   direction: "horizontal" | "vertical";
-  id?: string;
+  id?: string | null;
+  keyboardResizeBy?: number | null;
   style?: CSSProperties;
   type: "UrlPanelGroup";
 };
 
 type UrlPanelResizeHandle = {
   disabled?: boolean;
-  id?: string;
+  id?: string | null;
   style?: CSSProperties;
   type: "UrlPanelResizeHandle";
 };
@@ -55,7 +60,10 @@ function isPanelElement(value: any): value is ReactElement<PanelProps> {
 function isPanelGroupElement(
   value: any
 ): value is ReactElement<PanelGroupProps> {
-  return value?.type?.displayName === "PanelGroup";
+  return (
+    value?.type?.displayName === "PanelGroup" ||
+    value?.type?.displayName === "forwardRef(PanelGroup)"
+  );
 }
 
 function isPanelResizeHandleElement(
@@ -95,6 +103,7 @@ function UrlPanelToData(urlPanel: ReactElement<PanelProps>): UrlPanel {
         return child;
       }
     }),
+    collapsedSize: urlPanel.props.collapsedSize,
     collapsible: urlPanel.props.collapsible,
     defaultSize: urlPanel.props.defaultSize,
     id: urlPanel.props.id,
@@ -110,7 +119,7 @@ function UrlPanelGroupToData(
   urlPanelGroup: ReactElement<PanelGroupProps>
 ): UrlPanelGroup {
   return {
-    autoSaveId: urlPanelGroup.props.autoSaveId,
+    autoSaveId: urlPanelGroup.props.autoSaveId ?? undefined,
     children: Children.toArray(urlPanelGroup.props.children).map((child) => {
       if (isPanelElement(child)) {
         return UrlPanelToData(child);
@@ -122,6 +131,7 @@ function UrlPanelGroupToData(
     }),
     direction: urlPanelGroup.props.direction,
     id: urlPanelGroup.props.id,
+    keyboardResizeBy: urlPanelGroup.props.keyboardResizeBy,
     style: urlPanelGroup.props.style,
     type: "UrlPanelGroup",
   };
@@ -141,20 +151,33 @@ function UrlPanelResizeHandleToData(
 function urlPanelToPanel(
   urlPanel: UrlPanel,
   debugLogRef: RefObject<ImperativeDebugLogHandle>,
-  idToPanelMapRef: RefObject<Map<string, ImperativePanelHandle>>,
+  idToRefMapRef: RefObject<
+    Map<string, ImperativePanelHandle | ImperativePanelGroupHandle>
+  >,
   key?: any
 ): ReactElement {
   let onCollapse: PanelOnCollapse | undefined = undefined;
+  let onExpand: PanelOnExpand | undefined = undefined;
   let onResize: PanelOnResize | undefined = undefined;
-  let refSetter;
-  if (urlPanel.id) {
-    onCollapse = (collapsed: boolean) => {
+
+  const panelId = urlPanel.id;
+  if (panelId) {
+    onCollapse = () => {
       const debugLog = debugLogRef.current;
       if (debugLog) {
         debugLog.log({
-          collapsed,
-          panelId: urlPanel.id,
+          panelId,
           type: "onCollapse",
+        });
+      }
+    };
+
+    onExpand = () => {
+      const debugLog = debugLogRef.current;
+      if (debugLog) {
+        debugLog.log({
+          panelId,
+          type: "onExpand",
         });
       }
     };
@@ -163,34 +186,37 @@ function urlPanelToPanel(
       const debugLog = debugLogRef.current;
       if (debugLog) {
         debugLog.log({
-          panelId: urlPanel.id,
+          panelId,
           size,
           type: "onResize",
         });
       }
     };
-
-    refSetter = (panel: ImperativePanelHandle | null) => {
-      if (panel) {
-        idToPanelMapRef.current.set(urlPanel.id, panel);
-      } else {
-        idToPanelMapRef.current.delete(urlPanel.id);
-      }
-    };
   }
+
+  const refSetter = (panel: ImperativePanelHandle | null) => {
+    if (panel) {
+      const id = panel.getId();
+      const idToRefMap = idToRefMapRef.current!;
+      idToRefMap.set(id, panel);
+    }
+  };
 
   return createElement(
     Panel,
     {
+      className: "Panel",
+      collapsedSize: urlPanel.collapsedSize,
       collapsible: urlPanel.collapsible,
-      defaultSize: urlPanel.defaultSize,
-      id: urlPanel.id,
+      defaultSize: urlPanel.defaultSize ?? undefined,
+      id: urlPanel.id ?? undefined,
       key,
-      maxSize: urlPanel.maxSize,
+      maxSize: urlPanel.maxSize ?? undefined,
       minSize: urlPanel.minSize,
       onCollapse,
+      onExpand,
       onResize,
-      order: urlPanel.order,
+      order: urlPanel.order ?? undefined,
       ref: refSetter,
       style: urlPanel.style,
     },
@@ -199,7 +225,7 @@ function urlPanelToPanel(
         return urlPanelGroupToPanelGroup(
           child,
           debugLogRef,
-          idToPanelMapRef,
+          idToRefMapRef,
           index
         );
       } else {
@@ -212,34 +238,53 @@ function urlPanelToPanel(
 export function urlPanelGroupToPanelGroup(
   urlPanelGroup: UrlPanelGroup,
   debugLogRef: RefObject<ImperativeDebugLogHandle>,
-  idToPanelMapRef: RefObject<Map<string, ImperativePanelHandle>>,
+  idToRefMapRef: RefObject<
+    Map<string, ImperativePanelHandle | ImperativePanelGroupHandle>
+  >,
   key?: any
 ): ReactElement {
   let onLayout: PanelGroupOnLayout | undefined = undefined;
-  if (urlPanelGroup.id) {
-    onLayout = (sizes: []) => {
+
+  const groupId = urlPanelGroup.id;
+  if (groupId) {
+    onLayout = (layout: number[]) => {
       const debugLog = debugLogRef.current;
       if (debugLog) {
-        debugLog.log({ groupId: urlPanelGroup.id, type: "onLayout", sizes });
+        debugLog.log({ groupId, type: "onLayout", layout });
       }
     };
   }
+
+  const refSetter = (panelGroup: ImperativePanelGroupHandle | null) => {
+    if (panelGroup) {
+      const id = panelGroup.getId();
+      const idToRefMap = idToRefMapRef.current!;
+      idToRefMap.set(id, panelGroup);
+    }
+  };
 
   return createElement(
     PanelGroup,
     {
       autoSaveId: urlPanelGroup.autoSaveId,
+      className: "PanelGroup",
       direction: urlPanelGroup.direction,
       id: urlPanelGroup.id,
       key: key,
+      keyboardResizeBy: urlPanelGroup.keyboardResizeBy,
       onLayout,
+      ref: refSetter,
       style: urlPanelGroup.style,
     },
     urlPanelGroup.children.map((child, index) => {
       if (isUrlPanel(child)) {
-        return urlPanelToPanel(child, debugLogRef, idToPanelMapRef, index);
+        return urlPanelToPanel(child, debugLogRef, idToRefMapRef, index);
       } else if (isUrlPanelResizeHandle(child)) {
-        return urlPanelResizeHandleToPanelResizeHandle(child, index);
+        return urlPanelResizeHandleToPanelResizeHandle(
+          child,
+          debugLogRef,
+          index
+        );
       } else {
         throw Error("Invalid child");
       }
@@ -249,12 +294,30 @@ export function urlPanelGroupToPanelGroup(
 
 function urlPanelResizeHandleToPanelResizeHandle(
   urlPanelResizeHandle: UrlPanelResizeHandle,
+  debugLogRef: RefObject<ImperativeDebugLogHandle>,
   key?: any
 ): ReactElement {
+  let onDragging: PanelResizeHandleOnDragging | undefined = undefined;
+  const resizeHandleId = urlPanelResizeHandle.id;
+  if (resizeHandleId) {
+    onDragging = (isDragging: boolean) => {
+      const debugLog = debugLogRef.current;
+      if (debugLog) {
+        debugLog.log({
+          isDragging,
+          resizeHandleId,
+          type: "onDragging",
+        });
+      }
+    };
+  }
+
   return createElement(PanelResizeHandle, {
+    className: "PanelResizeHandle",
     disabled: urlPanelResizeHandle.disabled,
     id: urlPanelResizeHandle.id,
     key,
+    onDragging,
     style: urlPanelResizeHandle.style,
   });
 }

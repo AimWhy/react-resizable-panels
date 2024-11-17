@@ -1,13 +1,8 @@
-import { useEffect, useLayoutEffect } from "react";
+import { isBrowser } from "#is-browser";
+import { useLayoutEffect_do_not_use_directly } from "../vendor/react";
 
-const canUseEffectHooks = !!(
-  typeof window !== "undefined" &&
-  typeof window.document !== "undefined" &&
-  typeof window.document.createElement !== "undefined"
-);
-
-const useIsomorphicLayoutEffect = canUseEffectHooks
-  ? useLayoutEffect
+const useIsomorphicLayoutEffect = isBrowser
+  ? useLayoutEffect_do_not_use_directly
   : () => {};
 
 export default useIsomorphicLayoutEffect;

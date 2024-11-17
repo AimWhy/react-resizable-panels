@@ -1,16 +1,19 @@
 import { useReducer } from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-
-import Code from "../../components/Code";
-import Icon, { IconType } from "../../components/Icon";
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+  assert,
+} from "react-resizable-panels";
 import {
   TUTORIAL_CODE_CSS,
   TUTORIAL_CODE_HTML,
   TUTORIAL_CODE_JAVASCRIPT,
   TUTORIAL_CODE_README,
 } from "../../code";
+import Code from "../../components/Code";
+import Icon from "../../components/Icon";
 import { Language } from "../../suspense/SyntaxParsingCache";
-
 import styles from "./Collapsible.module.css";
 import Example from "./Example";
 import sharedStyles from "./shared.module.css";
@@ -23,9 +26,12 @@ export default function CollapsibleRoute() {
       headerNode={
         <>
           <p>
-            The example below uses the <code>collapsible</code> and{" "}
-            <code>onCollapse</code> props to mimic the UX of apps like VS Code
-            by configuring a panel to be <em>collapsible</em>.
+            The example below uses the <code>collapsedSize</code>,{" "}
+            <code>collapsible</code>, and <code>onCollapse</code> props to mimic
+            the UX of apps like VS Code by configuring a panel to be{" "}
+            <em>collapsible</em>. Panels can be collapsed all the way (to size
+            0) but in this example, the panel is configured to collapse to a
+            size that allows the file icons to remain visible.
           </p>
           <p>
             Drag the bar between the file browser and the source viewer to
@@ -43,7 +49,7 @@ function Content() {
 
   const { currentFileIndex, fileListCollapsed, openFiles } = state;
 
-  const currentFile = openFiles[currentFileIndex] || null;
+  const currentFile = openFiles[currentFileIndex] ?? null;
 
   const closeFile = (file: File) => {
     dispatch({ type: "close", file });
@@ -53,8 +59,12 @@ function Content() {
     dispatch({ type: "open", file });
   };
 
-  const toggleCollapsed = (collapsed: boolean) => {
-    dispatch({ type: "toggleCollapsed", collapsed });
+  const onCollapse = () => {
+    dispatch({ type: "toggleCollapsed", collapsed: false });
+  };
+
+  const onExpand = () => {
+    dispatch({ type: "toggleCollapsed", collapsed: true });
   };
 
   return (
@@ -66,11 +76,13 @@ function Content() {
         </div>
         <Panel
           className={sharedStyles.PanelColumn}
+          collapsedSize={5}
           collapsible={true}
-          defaultSize={20}
-          maxSize={25}
-          minSize={5}
-          onCollapse={toggleCollapsed}
+          defaultSize={15}
+          maxSize={20}
+          minSize={15}
+          onCollapse={onCollapse}
+          onExpand={onExpand}
         >
           <div className={styles.FileList}>
             <div className={styles.DirectoryEntry}>
@@ -99,7 +111,7 @@ function Content() {
               : styles.ResizeHandle
           }
         />
-        <Panel className={sharedStyles.PanelColumn}>
+        <Panel className={sharedStyles.PanelColumn} minSize={50}>
           <div className={styles.SourceTabs}>
             {Array.from(openFiles).map((file) => (
               <div
@@ -152,7 +164,7 @@ const FILE_PATHS: Array<[path: string, code: string]> = [
 
 const FILES: File[] = FILE_PATHS.map(([path, code]) => {
   const pathArray = path.split("/");
-  const fileName = pathArray.pop();
+  const fileName = pathArray.pop()!;
 
   return {
     code,
@@ -165,7 +177,7 @@ const FILES: File[] = FILE_PATHS.map(([path, code]) => {
 const CODE = `
 <PanelGroup direction="horizontal">
   <SideTabBar />
-  <Panel collapsible={true}>
+  <Panel collapsible={true} collapsedSize={35} minSize={10}>
     <SourceBrowser />
   </Panel>
   <PanelResizeHandle />
@@ -187,10 +199,13 @@ type FilesState = {
   openFiles: File[];
 };
 
+const FIRST_FILE = FILES[0];
+assert(FIRST_FILE, "No file found");
+
 const initialState: FilesState = {
   currentFileIndex: 0,
   fileListCollapsed: false,
-  openFiles: [FILES[0]],
+  openFiles: [FIRST_FILE],
 };
 
 function reducer(state: FilesState, action: FilesAction): FilesState {

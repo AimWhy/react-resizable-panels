@@ -1,22 +1,32 @@
 import type { PlaywrightTestConfig } from "@playwright/test";
 
+const { DEBUG } = process.env;
+
 const config: PlaywrightTestConfig = {
   use: {
-    // Uncomment to test in headless Chromium:
-    // launchOptions: {
-    //   slowMo: 100,
-    // },
-    // browserName: "chromium",
-    // headless: false,
+    browserName: "chromium",
     headless: true,
-    viewport: { width: 1280, height: 720 },
+    viewport: { width: 400, height: 300 },
     ignoreHTTPSErrors: true,
     video: "on-first-retry",
   },
   webServer: {
-    command: "PORT=2345 npm run watch",
-    url: "http://localhost:2345",
+    command: "npm run watch",
+    reuseExistingServer: true,
+    url: "http://localhost:1234",
   },
+  timeout: 60_000,
 };
+
+if (process.env.DEBUG) {
+  config.use = {
+    ...config.use,
+    headless: false,
+
+    launchOptions: {
+      // slowMo: DEBUG ? 250 : undefined,
+    },
+  };
+}
 
 export default config;

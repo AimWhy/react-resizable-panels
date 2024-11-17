@@ -3,29 +3,32 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "parcel build 'index.html'",
+    "build": "parcel build \"index.html\"",
+    "clear": "pnpm run clear:parcel-cache & pnpm run clear:node_modules",
+    "clear:node_modules": "rm -rf ./node_modules",
+    "clear:parcel-cache": "rm -rf ./.parcel-cache",
+    "kill-port": "kill-port ${PORT:-1234}",
     "test:e2e": "playwright test",
-    "watch": "kill-port ${PORT:-1234} && parcel 'index.html'"
-  },
-  "devDependencies": {
-    "kill-port": "latest"
+    "test:e2e:debug": "DEBUG=true playwright test",
+    "watch": "parcel \"index.html\""
   },
   "dependencies": {
     "@codemirror/lang-css": "latest",
     "@codemirror/lang-html": "latest",
     "@codemirror/lang-javascript": "latest",
-    "@codemirror/language": "latest",
     "@codemirror/lang-markdown": "latest",
+    "@codemirror/language": "latest",
     "@codemirror/state": "latest",
     "@lezer/highlight": "latest",
-    "@playwright/test": "latest",
+    "kill-port": "latest",
     "localforage": "latest",
     "match-sorter": "latest",
-    "playwright": "latest",
-    "react": "latest",
-    "react-dom": "latest",
+    "react": "experimental",
+    "react-dom": "experimental",
+    "react-resizable-panels": "*",
     "react-router-dom": "latest",
-    "react-virtualized-auto-sizer": "latest",
-    "sort-by": "latest"
+    "react-virtualized-auto-sizer": "^1.0.10",
+    "sort-by": "latest",
+    "suspense": "^0.0.38"
   }
 }

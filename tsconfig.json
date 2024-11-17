@@ -1,14 +1,16 @@
 {
   "compilerOptions": {
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
     "lib": ["ES2015", "DOM"],
     "module": "es2020",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noImplicitAny": true,
-    "jsx": "react-jsx",
-    "types": ["node"]
+    "noUncheckedIndexedAccess": true,
+    "strict": true,
+    "typeRoots": ["node_modules/@types"],
+    "types": ["jest", "node"],
   },
   "exclude": ["node_modules"],
   "include": ["declaration.d.ts", "packages/**/*.ts", "packages/**/*.tsx"],
-  "strict": true,
-  "target": "es2015"
 }

@@ -14,7 +14,8 @@ const LINKS = [
   { path: "collapsible", title: "Collapsible panels" },
   { path: "conditional", title: "Conditional panels" },
   { path: "external-persistence", title: "External persistence" },
-  { path: "imperative-api", title: "Imperative API" },
+  { path: "imperative-panel-api", title: "Imperative Panel API" },
+  { path: "imperative-panel-group-api", title: "Imperative PanelGroup API" },
 ];
 
 export default function HomeRoute() {
@@ -74,9 +75,19 @@ function HeaderPanel() {
       className={styles.HeaderLink}
       href="https://github.com/bvaughn/react-resizable-panels"
     >
-      <Logo>
-        <p className={styles.TagLine}>React components for resizable panels</p>
-      </Logo>
+      <span className={styles.Header}>
+        <span className={styles.HeaderRow}>
+          <Logo className={styles.HeaderLogo} />
+          <span className={styles.HeaderTexts}>
+            <span className={styles.HeaderText}>react</span>
+            <span className={styles.HeaderText}>resizable</span>
+            <span className={styles.HeaderText}>panels</span>
+          </span>
+        </span>
+        <p className={styles.HeaderTagLine}>
+          React components for resizable panels
+        </p>
+      </span>
     </a>
   );
 }
@@ -95,6 +106,18 @@ function InstallationPanel() {
         <span className="tok-comment"># yarn</span>
         <br />
         <span className="tok-operator">yarn add </span>
+        <span className="tok-variableName">react-resizable-panels</span>
+        <br />
+        <br />
+        <span className="tok-comment"># pnpm</span>
+        <br />
+        <span className="tok-operator">pnpm add </span>
+        <span className="tok-variableName">react-resizable-panels</span>
+        <br />
+        <br />
+        <span className="tok-comment"># bun</span>
+        <br />
+        <span className="tok-operator">bun add </span>
         <span className="tok-variableName">react-resizable-panels</span>
       </div>
     </div>

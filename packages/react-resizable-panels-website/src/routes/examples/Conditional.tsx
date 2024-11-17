@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Panel, PanelGroup } from "react-resizable-panels";
 
-import ResizeHandle from "../../components/ResizeHandle";
+import { ResizeHandle } from "../../components/ResizeHandle";
 
 import Example from "./Example";
 import styles from "./shared.module.css";
@@ -66,19 +66,19 @@ function Content({
       >
         {showLeftPanel && (
           <>
-            <Panel className={styles.Panel} order={1}>
+            <Panel className={styles.Panel} id="left" minSize={10} order={1}>
               <div className={styles.Centered}>left</div>
             </Panel>
             <ResizeHandle className={styles.ResizeHandle} />
           </>
         )}
-        <Panel className={styles.Panel} order={2}>
+        <Panel className={styles.Panel} id="center" minSize={10} order={2}>
           <div className={styles.Centered}>middle</div>
         </Panel>
         {showRightPanel && (
           <>
             <ResizeHandle className={styles.ResizeHandle} />
-            <Panel className={styles.Panel} order={3}>
+            <Panel className={styles.Panel} id="right" minSize={10} order={3}>
               <div className={styles.Centered}>right</div>
             </Panel>
           </>
@@ -92,19 +92,19 @@ const CODE = `
 <PanelGroup autoSaveId="conditional" direction="horizontal">
   {showLeftPanel && (
     <>
-      <Panel order={1}>
+      <Panel id="left" order={1}>
         left
       </Panel>
-      <ResizeHandle />
+      <PanelResizeHandle />
     </>
   )}
-  <Panel order={2}>
+  <Panel id="center" order={2}>
     middle
   </Panel>
   {showRightPanel && (
     <>
-      <ResizeHandle />
-      <Panel order={3}>
+      <PanelResizeHandle />
+      <Panel id="right" order={3}>
         right
       </Panel>
     </>
